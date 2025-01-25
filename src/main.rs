@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use macroquad::ui::{hash, root_ui, widgets};
+use macroquad::ui::{hash, root_ui, widgets, Skin};
 
 #[macroquad::main("UI showcase")]
 async fn main() {
@@ -11,15 +11,77 @@ async fn main() {
     let mut x1 = String::from("<x1>");
     let mut x2 = String::from("4");
     let mut dialog = String::from("Waiting...");
+
+    let skin1 = {
+        let button_style = root_ui()
+            .style_builder()
+            .background(
+                Image::from_file_with_format(include_bytes!("../ui_myassets/circle150.png"), None)
+                    .unwrap(),
+            )
+            // .background_margin(RectOffset::new(37.0, 37.0, 5.0, 5.0))
+            // .margin(RectOffset::new(10.0, 10.0, 0.0, 0.0))
+            // .background_hovered(
+            //     Image::from_file_with_format(
+            //         include_bytes!("../ui_assets/button_hovered_background.png"),
+            //         None,
+            //     )
+            //     .unwrap(),
+            // )
+            // .background_clicked(
+            //     Image::from_file_with_format(
+            //         include_bytes!("../ui_assets/button_clicked_background.png"),
+            //         None,
+            //     )
+            //     .unwrap(),
+            // )
+            // .text_color(Color::from_rgba(180, 180, 100, 255))
+            // .font_size(40)
+            .build();
+
+        Skin {
+            button_style,
+            ..root_ui().default_skin()
+        }
+    };
+
     loop {
         clear_background(GRAY);
 
-        // window:wroot_ui().push_skin(&window1_skin);
+        root_ui().push_skin(&skin1);
+
+        widgets::Window::new(hash!(), vec2(300., 0.), vec2(400., 400.)).ui(&mut root_ui(), |ui| {
+            widgets::Group::new(hash!("group"), vec2(screen_width(), screen_height() / 3.0))
+                .position(vec2(50.0, 0.5 * screen_height() / 3.0))
+                .ui(ui, |ui| {
+                    if widgets::Button::new("8").size(vec2(100., 100.)).ui(ui) {
+                        println!("You pushed the button 1!");
+                    };
+
+                    if widgets::Button::new("10")
+                        .size(vec2(100., 100.))
+                        .position(vec2(200., 0.))
+                        .ui(ui)
+                    {
+                        println!("You pushed the button 2!");
+                    };
+
+                    if widgets::Button::new("18")
+                        .size(vec2(100., 100.))
+                        .position(vec2(100., 100.))
+                        .ui(ui)
+                    {
+                        println!("You pushed the button 3!");
+                    };
+                });
+        });
+
+        root_ui().pop_skin();
 
         // Window definition
-        widgets::Window::new(hash!(), vec2(0., 0.), vec2(400., 400.)).ui(&mut root_ui(), |ui| {
+        widgets::Window::new(hash!(), vec2(0., 0.), vec2(300., 400.)).ui(&mut root_ui(), |ui| {
             widgets::Group::new(hash!("group"), vec2(screen_width(), screen_height() / 3.0))
-                .position(vec2(0.0, 0.5 * screen_height() / 3.0))
+                .position(vec2(0.0, 0. * screen_height() / 3.0))
                 .ui(ui, |ui| {
                     widgets::Label::new("Diagram").ui(ui);
                     widgets::InputText::new(hash!())

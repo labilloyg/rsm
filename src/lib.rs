@@ -4,8 +4,41 @@ use macroquad::prelude::*;
 
 use macroquad::ui::{hash, root_ui, widgets, Skin};
 
+pub async fn get_skin_button() -> Skin {
+    let button_style = root_ui()
+        .style_builder()
+        .background(
+            Image::from_file_with_format(include_bytes!("../ui_myassets/circle150.png"), None)
+                .unwrap(),
+        )
+        .background_margin(RectOffset::new(37.0, 37.0, 5.0, 5.0))
+        .margin(RectOffset::new(10.0, 10.0, 0.0, 0.0))
+        .background_hovered(
+            Image::from_file_with_format(
+                include_bytes!("../ui_assets/button_hovered_background.png"),
+                None,
+            )
+            .unwrap(),
+        )
+        .background_clicked(
+            Image::from_file_with_format(
+                include_bytes!("../ui_assets/button_clicked_background.png"),
+                None,
+            )
+            .unwrap(),
+        )
+        .text_color(Color::from_rgba(180, 180, 100, 255))
+        .font_size(40)
+        .build();
+
+    Skin {
+        button_style,
+        ..root_ui().default_skin()
+    }
+}
+
 #[warn(dead_code)]
-pub async fn get_skin() -> Skin {
+pub async fn get_skin1() -> Skin {
     let font = load_ttf_font("../ui_assets/HTOWERT.TTF").await.unwrap();
 
     let label_style = root_ui()
