@@ -39,7 +39,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             result: String::from("12"),
-            x1: String::from("<x1>"),
+            x1: String::from(""),
             x2: String::from("4"),
             dialog: String::from("Waiting..."),
             open_window: false,
@@ -77,13 +77,13 @@ async fn main() {
     let mut state = State::default();
 
     let skin1 = {
-        let button_style = root_ui()
-            .style_builder()
-            .background(
-                Image::from_file_with_format(include_bytes!("../ui_myassets/circle100.png"), None)
-                    .unwrap(),
-            )
-            .build();
+        let circle100 =
+            Image::from_file_with_format(include_bytes!("../ui_myassets/circle100.png"), None);
+
+        let button_style = match circle100 {
+            Ok(circle100) => root_ui().style_builder().background(circle100).build(),
+            _ => root_ui().style_builder().build(),
+        };
 
         Skin {
             button_style,
@@ -91,8 +91,97 @@ async fn main() {
         }
     };
 
+    let mut typing_timer = 0i32;
+    let typing_timer_max = 1000000;
+    let typing_thd = 10;
+
+    enum KeyAction {
+        Truncate,
+        Push(char),
+        Check,
+    }
+
+    fn check_key_down() -> Option<KeyAction> {
+        let nums = [
+            KeyCode::Key1,
+            KeyCode::Key2,
+            KeyCode::Key3,
+            KeyCode::Key4,
+            KeyCode::Key5,
+            KeyCode::Key6,
+            KeyCode::Key7,
+            KeyCode::Key8,
+            KeyCode::Key9,
+            KeyCode::Key0,
+            KeyCode::Kp0,
+            KeyCode::Kp1,
+            KeyCode::Kp2,
+            KeyCode::Kp3,
+            KeyCode::Kp4,
+            KeyCode::Kp5,
+            KeyCode::Kp6,
+            KeyCode::Kp7,
+            KeyCode::Kp8,
+            KeyCode::Kp9,
+        ];
+
+        if is_key_down(KeyCode::Backspace) {
+            return Some(KeyAction::Truncate);
+        };
+
+        if is_key_down(KeyCode::Enter) || is_key_down(KeyCode::KpEnter) {
+            return Some(KeyAction::Check);
+        }
+
+        let keys = get_keys_down();
+        if !keys.is_empty() {
+            if let Some(key) = keys.iter().next() {
+                if nums.contains(key) {
+                    let key_val = *key as u32;
+                    let char_val = if key_val >= 65456 {
+                        key_val - 65456 + 48
+                    } else {
+                        key_val
+                    };
+                    let c = char::from_u32(char_val);
+                    if let Some(c) = c {
+                        return Some(KeyAction::Push(c));
+                    } else {
+                        return None;
+                    }
+                };
+            }
+        };
+        None
+    }
+
     loop {
         clear_background(PINK);
+
+        if typing_timer < typing_timer_max {
+            typing_timer += 1;
+        }
+
+        if typing_timer >= typing_thd {
+            if let Some(action) = check_key_down() {
+                typing_timer = 0;
+                match action {
+                    KeyAction::Truncate => {
+                        let n = state.x1.len();
+                        if n > 0 {
+                            state.x1.truncate(n - 1);
+                            typing_timer = 0;
+                        }
+                    }
+                    KeyAction::Push(c) => {
+                        state.x1.push(c);
+                    }
+                    KeyAction::Check => {
+                        state.dialog = state.check_result();
+                    }
+                }
+            };
+        }
 
         widgets::Group::new(hash!(), vec2(140., 320.))
             .position(vec2(0., 0.))
