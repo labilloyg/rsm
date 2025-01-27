@@ -57,7 +57,22 @@ enum DiagramValue {
     Undefined,
 }
 
-#[macroquad::main("UI showcase")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "RSM [Rust School of Mathematics]".to_owned(),
+        fullscreen: false,
+        window_width: 640,
+        window_height: 320,
+        window_resizable: false,
+        platform: miniquad::conf::Platform {
+            linux_backend: miniquad::conf::LinuxBackend::WaylandOnly,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut state = State::default();
 
@@ -65,7 +80,7 @@ async fn main() {
         let button_style = root_ui()
             .style_builder()
             .background(
-                Image::from_file_with_format(include_bytes!("../ui_myassets/circle150.png"), None)
+                Image::from_file_with_format(include_bytes!("../ui_myassets/circle100.png"), None)
                     .unwrap(),
             )
             .build();
@@ -77,54 +92,68 @@ async fn main() {
     };
 
     loop {
-        clear_background(GRAY);
+        clear_background(PINK);
+
+        widgets::Group::new(hash!(), vec2(140., 320.))
+            .position(vec2(0., 0.))
+            .ui(&mut root_ui(), |ui| {
+                widgets::Label::new("Info...".to_string()).ui(ui);
+            });
+
+        widgets::Group::new(hash!(), vec2(500., 50.))
+            .position(vec2(140., 0.))
+            .ui(&mut root_ui(), |ui| {
+                widgets::Label::new("What is the missing number in this addition?".to_string())
+                    .ui(ui);
+            });
 
         root_ui().push_skin(&skin1);
 
-        widgets::Window::new(hash!(), vec2(300., 0.), vec2(400., 400.)).ui(&mut root_ui(), |ui| {
-            widgets::Group::new(hash!(), vec2(screen_width(), screen_height() / 3.0))
-                .position(vec2(50.0, 0.5 * screen_height() / 3.0))
-                .ui(ui, |ui| {
-                    if widgets::Button::new(state.result.clone())
-                        .size(vec2(100., 100.))
-                        .position(vec2(100., 0.))
-                        .ui(ui)
-                    {
-                        state.target = DiagramValue::Result;
-                        state.pop_up_buf = state.result.clone();
-                        state.open_window = true;
-                        state.dialog = "You pushed the button 1!".to_string();
-                    };
+        widgets::Group::new(hash!(), vec2(225., 150.))
+            .position(vec2(277., 50.))
+            .ui(&mut root_ui(), |ui| {
+                if widgets::Button::new(state.result.clone())
+                    .size(vec2(75., 75.))
+                    .position(vec2(75., 0.))
+                    .ui(ui)
+                {
+                    state.target = DiagramValue::Result;
+                    state.pop_up_buf = state.result.clone();
+                    state.open_window = true;
+                    state.dialog = "You pushed the button 1!".to_string();
+                };
 
-                    if widgets::Button::new(state.x1.clone())
-                        .size(vec2(100., 100.))
-                        .position(vec2(0., 100.))
-                        .ui(ui)
-                    {
-                        state.target = DiagramValue::X1;
-                        state.pop_up_buf = state.x1.clone();
-                        state.open_window = true;
-                        state.dialog = "You pushed the button 2!".to_string();
-                    };
+                if widgets::Button::new(state.x1.clone())
+                    .size(vec2(75., 75.))
+                    .position(vec2(0., 75.))
+                    .ui(ui)
+                {
+                    state.target = DiagramValue::X1;
+                    state.pop_up_buf = state.x1.clone();
+                    state.open_window = true;
+                    state.dialog = "You pushed the button 2!".to_string();
+                };
 
-                    if widgets::Button::new(state.x2.clone())
-                        .size(vec2(100., 100.))
-                        .position(vec2(200., 100.))
-                        .ui(ui)
-                    {
-                        state.target = DiagramValue::X2;
-                        state.pop_up_buf = state.x2.clone();
-                        state.open_window = true;
-                        "You pushed the button 3!".to_string();
-                    };
-                });
-            widgets::Editbox::new(hash!(), vec2(200., 30.)).ui(ui, &mut state.dialog);
-        });
+                if widgets::Button::new(state.x2.clone())
+                    .size(vec2(75., 75.))
+                    .position(vec2(150., 75.))
+                    .ui(ui)
+                {
+                    state.target = DiagramValue::X2;
+                    state.pop_up_buf = state.x2.clone();
+                    state.open_window = true;
+                    "You pushed the button 3!".to_string();
+                };
+            });
+
+        widgets::Editbox::new(hash!(), vec2(300., 30.))
+            .position(vec2(240., 275.))
+            .ui(&mut root_ui(), &mut state.dialog);
 
         root_ui().pop_skin();
 
         if state.open_window {
-            widgets::Window::new(hash!(), vec2(150., 150.), vec2(200., 200.)).ui(
+            widgets::Window::new(hash!(), vec2(277., 50.), vec2(150., 100.)).ui(
                 &mut root_ui(),
                 |ui| {
                     widgets::InputText::new(hash!())
