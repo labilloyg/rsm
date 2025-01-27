@@ -2,6 +2,24 @@ use macroquad::prelude::*;
 
 use macroquad::ui::{hash, root_ui, widgets, Skin};
 
+use ::rand;
+use ::rand::prelude::*;
+
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "RSM [Rust School of Mathematics]".to_owned(),
+        fullscreen: false,
+        window_width: 640,
+        window_height: 320,
+        window_resizable: false,
+        platform: miniquad::conf::Platform {
+            linux_backend: miniquad::conf::LinuxBackend::WaylandOnly,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct State {
     // The values for the exercice
@@ -33,6 +51,61 @@ impl State {
             _ => String::from("Invalid input!"),
         }
     }
+
+    fn truncate(&mut self) {
+        match self.target {
+            DiagramValue::X1 => {
+                let n = self.x1.len();
+                if n > 0 {
+                    self.x1.truncate(n - 1);
+                }
+            }
+            DiagramValue::X2 => {
+                let n = self.x2.len();
+                if n > 0 {
+                    self.x2.truncate(n - 1);
+                }
+            }
+            DiagramValue::Result => {
+                let n = self.result.len();
+                if n > 0 {
+                    self.result.truncate(n - 1);
+                }
+            }
+        }
+    }
+
+    fn push(&mut self, c: char) {
+        match self.target {
+            DiagramValue::X1 => {
+                self.x1.push(c);
+            }
+            DiagramValue::X2 => {
+                self.x2.push(c);
+            }
+            DiagramValue::Result => {
+                self.result.push(c);
+            }
+        }
+    }
+
+    fn random_addition(state: &mut State) {
+        let mut rng = rand::rng();
+        let result: u32 = rng.random_range(0..=20);
+        let x: i32 = rng.random_range(0..=result as i32);
+        let xy = rng.random_range(0..=1);
+
+        if xy == 0 {
+            state.x1 = x.to_string();
+            state.x2 = "".to_string();
+            state.target = DiagramValue::X2;
+        } else {
+            state.x1 = "".to_string();
+            state.x2 = x.to_string();
+            state.target = DiagramValue::X1;
+        }
+        state.result = result.to_string();
+    }
 }
 
 impl Default for State {
@@ -44,32 +117,81 @@ impl Default for State {
             dialog: String::from("Waiting..."),
             open_window: false,
             pop_up_buf: String::from(""),
-            target: DiagramValue::Undefined,
+            target: DiagramValue::X1,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum DiagramValue {
     Result,
     X1,
     X2,
-    Undefined,
 }
 
-fn window_conf() -> Conf {
-    Conf {
-        window_title: "RSM [Rust School of Mathematics]".to_owned(),
-        fullscreen: false,
-        window_width: 640,
-        window_height: 320,
-        window_resizable: false,
-        platform: miniquad::conf::Platform {
-            linux_backend: miniquad::conf::LinuxBackend::WaylandOnly,
-            ..Default::default()
-        },
-        ..Default::default()
+enum KeyAction {
+    Truncate,
+    Push(char),
+    Check,
+    Next,
+}
+
+fn check_key_down() -> Option<KeyAction> {
+    let nums = [
+        KeyCode::Key1,
+        KeyCode::Key2,
+        KeyCode::Key3,
+        KeyCode::Key4,
+        KeyCode::Key5,
+        KeyCode::Key6,
+        KeyCode::Key7,
+        KeyCode::Key8,
+        KeyCode::Key9,
+        KeyCode::Key0,
+        KeyCode::Kp0,
+        KeyCode::Kp1,
+        KeyCode::Kp2,
+        KeyCode::Kp3,
+        KeyCode::Kp4,
+        KeyCode::Kp5,
+        KeyCode::Kp6,
+        KeyCode::Kp7,
+        KeyCode::Kp8,
+        KeyCode::Kp9,
+    ];
+
+    if is_key_down(KeyCode::Backspace) {
+        return Some(KeyAction::Truncate);
+    };
+
+    if is_key_down(KeyCode::Enter) || is_key_down(KeyCode::KpEnter) {
+        if is_key_down(KeyCode::LeftShift) {
+            return Some(KeyAction::Next);
+        } else {
+            return Some(KeyAction::Check);
+        }
     }
+
+    let keys = get_keys_down();
+    if !keys.is_empty() {
+        if let Some(key) = keys.iter().next() {
+            if nums.contains(key) {
+                let key_val = *key as u32;
+                let char_val = if key_val >= 65456 {
+                    key_val - 65456 + 48
+                } else {
+                    key_val
+                };
+                let c = char::from_u32(char_val);
+                if let Some(c) = c {
+                    return Some(KeyAction::Push(c));
+                } else {
+                    return None;
+                }
+            };
+        }
+    };
+    None
 }
 
 #[macroquad::main(window_conf)]
@@ -95,66 +217,6 @@ async fn main() {
     let typing_timer_max = 1000000;
     let typing_thd = 10;
 
-    enum KeyAction {
-        Truncate,
-        Push(char),
-        Check,
-    }
-
-    fn check_key_down() -> Option<KeyAction> {
-        let nums = [
-            KeyCode::Key1,
-            KeyCode::Key2,
-            KeyCode::Key3,
-            KeyCode::Key4,
-            KeyCode::Key5,
-            KeyCode::Key6,
-            KeyCode::Key7,
-            KeyCode::Key8,
-            KeyCode::Key9,
-            KeyCode::Key0,
-            KeyCode::Kp0,
-            KeyCode::Kp1,
-            KeyCode::Kp2,
-            KeyCode::Kp3,
-            KeyCode::Kp4,
-            KeyCode::Kp5,
-            KeyCode::Kp6,
-            KeyCode::Kp7,
-            KeyCode::Kp8,
-            KeyCode::Kp9,
-        ];
-
-        if is_key_down(KeyCode::Backspace) {
-            return Some(KeyAction::Truncate);
-        };
-
-        if is_key_down(KeyCode::Enter) || is_key_down(KeyCode::KpEnter) {
-            return Some(KeyAction::Check);
-        }
-
-        let keys = get_keys_down();
-        if !keys.is_empty() {
-            if let Some(key) = keys.iter().next() {
-                if nums.contains(key) {
-                    let key_val = *key as u32;
-                    let char_val = if key_val >= 65456 {
-                        key_val - 65456 + 48
-                    } else {
-                        key_val
-                    };
-                    let c = char::from_u32(char_val);
-                    if let Some(c) = c {
-                        return Some(KeyAction::Push(c));
-                    } else {
-                        return None;
-                    }
-                };
-            }
-        };
-        None
-    }
-
     loop {
         clear_background(PINK);
 
@@ -165,19 +227,19 @@ async fn main() {
         if typing_timer >= typing_thd {
             if let Some(action) = check_key_down() {
                 typing_timer = 0;
+                state.dialog = "Waiting...".to_string();
                 match action {
                     KeyAction::Truncate => {
-                        let n = state.x1.len();
-                        if n > 0 {
-                            state.x1.truncate(n - 1);
-                            typing_timer = 0;
-                        }
+                        state.truncate();
                     }
                     KeyAction::Push(c) => {
-                        state.x1.push(c);
+                        state.push(c);
                     }
                     KeyAction::Check => {
                         state.dialog = state.check_result();
+                    }
+                    KeyAction::Next => {
+                        State::random_addition(&mut state);
                     }
                 }
             };
@@ -209,7 +271,6 @@ async fn main() {
                     state.target = DiagramValue::Result;
                     state.pop_up_buf = state.result.clone();
                     state.open_window = true;
-                    state.dialog = "You pushed the button 1!".to_string();
                 };
 
                 if widgets::Button::new(state.x1.clone())
@@ -220,7 +281,6 @@ async fn main() {
                     state.target = DiagramValue::X1;
                     state.pop_up_buf = state.x1.clone();
                     state.open_window = true;
-                    state.dialog = "You pushed the button 2!".to_string();
                 };
 
                 if widgets::Button::new(state.x2.clone())
@@ -231,15 +291,22 @@ async fn main() {
                     state.target = DiagramValue::X2;
                     state.pop_up_buf = state.x2.clone();
                     state.open_window = true;
-                    "You pushed the button 3!".to_string();
                 };
             });
+
+        root_ui().pop_skin();
 
         widgets::Editbox::new(hash!(), vec2(300., 30.))
             .position(vec2(240., 275.))
             .ui(&mut root_ui(), &mut state.dialog);
 
-        root_ui().pop_skin();
+        if widgets::Button::new("Next!".to_string())
+            .size(vec2(75., 25.))
+            .position(vec2(352., 225.))
+            .ui(&mut root_ui())
+        {
+            State::random_addition(&mut state);
+        };
 
         if state.open_window {
             widgets::Window::new(hash!(), vec2(277., 50.), vec2(150., 100.)).ui(
@@ -265,7 +332,6 @@ async fn main() {
                             DiagramValue::Result => {
                                 state.result = state.pop_up_buf.clone();
                             }
-                            DiagramValue::Undefined => {}
                         }
                         state.open_window = false;
                         state.dialog = state.check_result();
