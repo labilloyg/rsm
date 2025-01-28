@@ -20,6 +20,50 @@ fn window_conf() -> Conf {
     }
 }
 
+async fn get_skin_title() -> Skin {
+    let font = load_ttf_font("ui_myassets/Coolvetica Rg.otf").await;
+
+    let label_style = match font {
+        Ok(font) => root_ui()
+            .style_builder()
+            .with_font(&font)
+            .unwrap()
+            .text_color(BLACK)
+            .font_size(24)
+            .build(),
+        _ => root_ui().style_builder().build(),
+    };
+
+    Skin {
+        label_style,
+        ..root_ui().default_skin()
+    }
+}
+
+async fn get_skin_diagram() -> Skin {
+    let font = load_ttf_font("ui_myassets/Coolvetica Rg.otf").await;
+
+    let circle100 =
+        Image::from_file_with_format(include_bytes!("../ui_myassets/circle75.png"), None);
+
+    let button_style = match (circle100, font) {
+        (Ok(circle100), Ok(font)) => root_ui()
+            .style_builder()
+            .background(circle100)
+            .with_font(&font)
+            .unwrap()
+            .text_color(BLACK)
+            .font_size(32)
+            .build(),
+        (_, _) => root_ui().style_builder().build(),
+    };
+
+    Skin {
+        button_style,
+        ..root_ui().default_skin()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct State {
     // The values for the exercice
@@ -172,6 +216,10 @@ fn check_key_down() -> Option<KeyAction> {
         }
     }
 
+    if is_key_down(KeyCode::Right) {
+        return Some(KeyAction::Next);
+    }
+
     let keys = get_keys_down();
     if !keys.is_empty() {
         if let Some(key) = keys.iter().next() {
@@ -198,35 +246,19 @@ fn check_key_down() -> Option<KeyAction> {
 async fn main() {
     let mut state = State::default();
 
-    let skin1 = {
-        let circle100 =
-            Image::from_file_with_format(include_bytes!("../ui_myassets/circle100.png"), None);
+    let skin_diagram = get_skin_diagram().await;
+    let skin_title = get_skin_title().await;
 
-        let button_style = match circle100 {
-            Ok(circle100) => root_ui().style_builder().background(circle100).build(),
-            _ => root_ui().style_builder().build(),
-        };
-
-        Skin {
-            button_style,
-            ..root_ui().default_skin()
-        }
-    };
-
-    let mut typing_timer = 0i32;
-    let typing_timer_max = 1000000;
-    let typing_thd = 10;
+    let typing_thd = 0.15;
+    let mut ref_time = get_time();
 
     loop {
         clear_background(PINK);
+        let can_type = (get_time() - ref_time) >= typing_thd;
 
-        if typing_timer < typing_timer_max {
-            typing_timer += 1;
-        }
-
-        if typing_timer >= typing_thd {
+        if can_type {
             if let Some(action) = check_key_down() {
-                typing_timer = 0;
+                ref_time = get_time();
                 state.dialog = "Waiting...".to_string();
                 match action {
                     KeyAction::Truncate => {
@@ -251,6 +283,8 @@ async fn main() {
                 widgets::Label::new("Info...".to_string()).ui(ui);
             });
 
+        root_ui().push_skin(&skin_title);
+
         widgets::Group::new(hash!(), vec2(500., 50.))
             .position(vec2(140., 0.))
             .ui(&mut root_ui(), |ui| {
@@ -258,9 +292,9 @@ async fn main() {
                     .ui(ui);
             });
 
-        root_ui().push_skin(&skin1);
+        root_ui().push_skin(&skin_diagram);
 
-        widgets::Group::new(hash!(), vec2(225., 150.))
+        widgets::Group::new(hash!(), vec2(227., 152.))
             .position(vec2(277., 50.))
             .ui(&mut root_ui(), |ui| {
                 if widgets::Button::new(state.result.clone())
