@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.39"
 macroquad = "=0.4.13"
 rand = "0.9.0"
+timer = "0.2.0"

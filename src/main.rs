@@ -2,6 +2,10 @@ use macroquad::prelude::*;
 
 use macroquad::ui::{hash, root_ui, widgets, Skin};
 
+use std::sync::{Arc, Mutex};
+extern crate chrono;
+extern crate timer;
+
 use ::rand;
 use ::rand::prelude::*;
 
@@ -242,9 +246,49 @@ fn check_keyboard_input() -> Option<KeyAction> {
     None
 }
 
+enum GameTimerState {
+    Paused,
+    Running,
+    Ended,
+}
+
+struct GameTimer {
+    nominal_value: usize,
+    state: GameTimerState,
+    value: usize,
+}
+
+impl Default for GameTimer {
+    fn default() -> Self {
+        Self {
+            nominal_value: 30,
+            state: GameTimerState::Paused,
+            value: 30,
+        }
+    }
+}
+
+impl GameTimer {
+    fn reset(&mut self) {
+        self.state = GameTimerState::Paused;
+        self.value = self.nominal_value;
+    }
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut state = State::default();
+
+    let timer = timer::Timer::new();
+    let mut timer_state = GameTimer::default();
+    let mut timer_value = Arc::new(Mutex::new(0));
+
+    let guard = {
+        let timer_value = timer_value.clone();
+        timer.schedule_repeating(chrono::Duration::milliseconds(1000), move || {
+            *timer_value.lock().unwrap() += 1;
+        })
+    };
 
     let skin_diagram = get_skin_diagram().await;
     let skin_title = get_skin_title().await;
@@ -284,12 +328,17 @@ async fn main() {
             };
         }
 
+        // -- Left toolbar --
         widgets::Group::new(hash!(), vec2(140., 320.))
             .position(vec2(0., 0.))
             .ui(&mut root_ui(), |ui| {
                 widgets::Label::new("Info...".to_string()).ui(ui);
+                widgets::Label::new(timer_value.lock().unwrap().to_string()).ui(ui);
+                // secure the unwrap
             });
+        // -- Lefft toolbar --
 
+        // -- Top title --
         root_ui().push_skin(&skin_title);
 
         widgets::Group::new(hash!(), vec2(500., 50.))
@@ -298,7 +347,9 @@ async fn main() {
                 widgets::Label::new("What is the missing number in this addition?".to_string())
                     .ui(ui);
             });
+        // -- Top title --
 
+        // -- Diagram --
         root_ui().push_skin(&skin_diagram);
 
         draw_texture(&top_left_arc, 277. + 0., 50. + 0., WHITE);
@@ -337,7 +388,9 @@ async fn main() {
                     state.open_window = true;
                 };
             });
+        // -- Diagram --
 
+        // -- Lower controls --
         root_ui().pop_skin();
 
         widgets::Editbox::new(hash!(), vec2(300., 30.))
@@ -351,7 +404,9 @@ async fn main() {
         {
             State::random_addition(&mut state);
         };
+        // -- Lower controls --
 
+        // -- Popup window --
         if state.open_window {
             widgets::Window::new(hash!(), vec2(277., 50.), vec2(150., 100.)).ui(
                 &mut root_ui(),
@@ -383,6 +438,8 @@ async fn main() {
                 },
             );
         };
+        // -- Popup window --
+
         root_ui().pop_skin();
 
         next_frame().await;
