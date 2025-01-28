@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 
+use macroquad::ui::widgets::Texture;
 use macroquad::ui::{hash, root_ui, widgets, Skin};
 
 use ::rand;
@@ -249,6 +250,13 @@ async fn main() {
     let skin_diagram = get_skin_diagram().await;
     let skin_title = get_skin_title().await;
 
+    let top_left_arc = load_texture("./ui_myassets/top_left_arc75.png")
+        .await
+        .unwrap_or(Texture2D::empty());
+    let top_right_arc = load_texture("./ui_myassets/top_right_arc75.png")
+        .await
+        .unwrap_or(Texture2D::empty());
+
     let typing_thd = 0.15;
     let mut ref_time = get_time();
 
@@ -293,6 +301,9 @@ async fn main() {
             });
 
         root_ui().push_skin(&skin_diagram);
+
+        draw_texture(&top_left_arc, 277. + 0., 50. + 0., WHITE);
+        draw_texture(&top_right_arc, 277. + 151., 50. + 0., WHITE);
 
         widgets::Group::new(hash!(), vec2(227., 152.))
             .position(vec2(277., 50.))
