@@ -180,7 +180,7 @@ enum KeyAction {
     Next,
 }
 
-fn check_key_down() -> Option<KeyAction> {
+fn check_keyboard_input() -> Option<KeyAction> {
     let nums = [
         KeyCode::Key1,
         KeyCode::Key2,
@@ -204,11 +204,11 @@ fn check_key_down() -> Option<KeyAction> {
         KeyCode::Kp9,
     ];
 
-    if is_key_down(KeyCode::Backspace) {
+    if is_key_pressed(KeyCode::Backspace) {
         return Some(KeyAction::Truncate);
     };
 
-    if is_key_down(KeyCode::Enter) || is_key_down(KeyCode::KpEnter) {
+    if is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::KpEnter) {
         if is_key_down(KeyCode::LeftShift) {
             return Some(KeyAction::Next);
         } else {
@@ -216,7 +216,7 @@ fn check_key_down() -> Option<KeyAction> {
         }
     }
 
-    if is_key_down(KeyCode::Right) {
+    if is_key_pressed(KeyCode::Right) {
         return Some(KeyAction::Next);
     }
 
@@ -257,7 +257,7 @@ async fn main() {
         let can_type = (get_time() - ref_time) >= typing_thd;
 
         if can_type {
-            if let Some(action) = check_key_down() {
+            if let Some(action) = check_keyboard_input() {
                 ref_time = get_time();
                 state.dialog = "Waiting...".to_string();
                 match action {
