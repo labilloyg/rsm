@@ -1,6 +1,5 @@
 use macroquad::prelude::*;
 
-use macroquad::ui::widgets::Texture;
 use macroquad::ui::{hash, root_ui, widgets, Skin};
 
 use ::rand;
@@ -88,7 +87,7 @@ impl State {
         match (res, x1_val, x2_val) {
             (Ok(res), Ok(x1_val), Ok(x2_val)) => {
                 if res == x1_val + x2_val {
-                    String::from("Corret!")
+                    String::from("Correct!")
                 } else {
                     String::from("Try again :)")
                 }
