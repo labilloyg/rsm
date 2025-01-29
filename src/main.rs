@@ -246,9 +246,11 @@ fn check_keyboard_input() -> Option<KeyAction> {
     None
 }
 
+#[derive(PartialEq, Debug)]
 enum GameTimerState {
-    Paused,
+    Initialized,
     Running,
+    Paused,
     Ended,
 }
 
@@ -262,7 +264,7 @@ impl Default for GameTimer {
     fn default() -> Self {
         Self {
             nominal_value: 30,
-            state: GameTimerState::Paused,
+            state: GameTimerState::Initialized,
             value: 30,
         }
     }
@@ -270,7 +272,7 @@ impl Default for GameTimer {
 
 impl GameTimer {
     fn reset(&mut self) {
-        self.state = GameTimerState::Paused;
+        self.state = GameTimerState::Initialized;
         self.value = self.nominal_value;
     }
 }
@@ -280,13 +282,20 @@ async fn main() {
     let mut state = State::default();
 
     let timer = timer::Timer::new();
-    let mut timer_state = GameTimer::default();
-    let mut timer_value = Arc::new(Mutex::new(0));
+    let timer_state = GameTimer::default();
+    let timer_value = Arc::new(Mutex::new(timer_state));
 
-    let guard = {
+    let _guard = {
         let timer_value = timer_value.clone();
         timer.schedule_repeating(chrono::Duration::milliseconds(1000), move || {
-            *timer_value.lock().unwrap() += 1;
+            let mut current_state = timer_value.lock().unwrap();
+            if matches!(current_state.state, GameTimerState::Running) {
+                if current_state.value > 0 {
+                    current_state.value -= 1;
+                } else {
+                    current_state.state = GameTimerState::Ended;
+                }
+            }
         })
     };
 
@@ -328,19 +337,67 @@ async fn main() {
             };
         }
 
+        root_ui().push_skin(&skin_title);
         // -- Left toolbar --
-        widgets::Group::new(hash!(), vec2(140., 320.))
-            .position(vec2(0., 0.))
+        widgets::Group::new(hash!(), vec2(140., 100.))
+            .position(vec2(0., 50.))
             .ui(&mut root_ui(), |ui| {
-                widgets::Label::new("Info...".to_string()).ui(ui);
-                widgets::Label::new(timer_value.lock().unwrap().to_string()).ui(ui);
-                // secure the unwrap
+                let mut current_state = timer_value.lock().unwrap();
+                let (timer_label, timer_message) =
+                    if !matches!(current_state.state, GameTimerState::Ended) {
+                        ("Timer:".to_string(), current_state.value.to_string())
+                    } else {
+                        ("Game Ended!".to_string(), "".to_string())
+                    };
+                widgets::Label::new(timer_label).ui(ui);
+                ui.same_line(70.);
+                widgets::Label::new(timer_message).ui(ui);
+
+                let start_label = if current_state.state == GameTimerState::Ended {
+                    "Again!".to_string()
+                } else {
+                    "Start".to_string()
+                };
+
+                if widgets::Button::new(start_label)
+                    .size(vec2(50., 30.))
+                    .position(vec2(0., 60.))
+                    .ui(ui)
+                {
+                    match current_state.state {
+                        GameTimerState::Initialized | GameTimerState::Paused => {
+                            current_state.state = GameTimerState::Running;
+                        }
+                        GameTimerState::Ended => {
+                            current_state.reset();
+                        }
+                        _ => {}
+                    }
+                };
+                let stop_label = if current_state.state == GameTimerState::Paused {
+                    "Reset".to_string()
+                } else {
+                    "Pause".to_string()
+                };
+                if widgets::Button::new(stop_label)
+                    .size(vec2(50., 30.))
+                    .position(vec2(55., 60.))
+                    .ui(ui)
+                {
+                    match current_state.state {
+                        GameTimerState::Running => {
+                            current_state.state = GameTimerState::Paused;
+                        }
+                        GameTimerState::Paused => {
+                            current_state.reset();
+                        }
+                        _ => {}
+                    }
+                };
             });
-        // -- Lefft toolbar --
+        // -- Left toolbar --
 
         // -- Top title --
-        root_ui().push_skin(&skin_title);
-
         widgets::Group::new(hash!(), vec2(500., 50.))
             .position(vec2(140., 0.))
             .ui(&mut root_ui(), |ui| {
