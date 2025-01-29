@@ -161,7 +161,7 @@ impl Default for State {
             result: String::from("12"),
             x1: String::from(""),
             x2: String::from("4"),
-            dialog: String::from("Waiting..."),
+            dialog: String::from("Start the timer to play!"),
             open_window: false,
             pop_up_buf: String::from(""),
             target: DiagramValue::X1,
@@ -316,7 +316,7 @@ async fn main() {
         clear_background(PINK);
         let can_type = (get_time() - ref_time) >= typing_thd;
 
-        if can_type {
+        if can_type && timer_value.lock().unwrap().state == GameTimerState::Running {
             if let Some(action) = check_keyboard_input() {
                 ref_time = get_time();
                 state.dialog = "Waiting...".to_string();
@@ -347,6 +347,7 @@ async fn main() {
                     if !matches!(current_state.state, GameTimerState::Ended) {
                         ("Timer:".to_string(), current_state.value.to_string())
                     } else {
+                        state.dialog = "Reset timer to start again!".to_string();
                         ("Game Ended!".to_string(), "".to_string())
                     };
                 widgets::Label::new(timer_label).ui(ui);
@@ -367,9 +368,11 @@ async fn main() {
                     match current_state.state {
                         GameTimerState::Initialized | GameTimerState::Paused => {
                             current_state.state = GameTimerState::Running;
+                            state.dialog = "Waiting...".to_string();
                         }
                         GameTimerState::Ended => {
                             current_state.reset();
+                            state.dialog = "Start the timer to play!".to_string();
                         }
                         _ => {}
                     }
@@ -387,9 +390,11 @@ async fn main() {
                     match current_state.state {
                         GameTimerState::Running => {
                             current_state.state = GameTimerState::Paused;
+                            state.dialog = "Restart the timer to play!".to_string();
                         }
                         GameTimerState::Paused => {
                             current_state.reset();
+                            state.dialog = "Start the timer to play!".to_string();
                         }
                         _ => {}
                     }
@@ -415,10 +420,12 @@ async fn main() {
         widgets::Group::new(hash!(), vec2(227., 152.))
             .position(vec2(277., 50.))
             .ui(&mut root_ui(), |ui| {
+                let is_running = timer_value.lock().unwrap().state == GameTimerState::Running;
                 if widgets::Button::new(state.result.clone())
                     .size(vec2(75., 75.))
                     .position(vec2(75., 0.))
                     .ui(ui)
+                    && is_running
                 {
                     state.target = DiagramValue::Result;
                     state.pop_up_buf = state.result.clone();
@@ -429,6 +436,7 @@ async fn main() {
                     .size(vec2(75., 75.))
                     .position(vec2(0., 75.))
                     .ui(ui)
+                    && is_running
                 {
                     state.target = DiagramValue::X1;
                     state.pop_up_buf = state.x1.clone();
@@ -439,6 +447,7 @@ async fn main() {
                     .size(vec2(75., 75.))
                     .position(vec2(150., 75.))
                     .ui(ui)
+                    && is_running
                 {
                     state.target = DiagramValue::X2;
                     state.pop_up_buf = state.x2.clone();
@@ -458,6 +467,7 @@ async fn main() {
             .size(vec2(75., 25.))
             .position(vec2(352., 225.))
             .ui(&mut root_ui())
+            && timer_value.lock().unwrap().state == GameTimerState::Running
         {
             State::random_addition(&mut state);
         };
