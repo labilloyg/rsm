@@ -25,7 +25,7 @@ fn window_conf() -> Conf {
 }
 
 async fn get_skin_title() -> Skin {
-    let font = load_ttf_font("ui_myassets/Coolvetica Rg.otf").await;
+    let font = load_ttf_font("Coolvetica Rg.otf").await;
 
     let label_style = match font {
         Ok(font) => root_ui()
@@ -45,10 +45,9 @@ async fn get_skin_title() -> Skin {
 }
 
 async fn get_skin_diagram() -> Skin {
-    let font = load_ttf_font("ui_myassets/Coolvetica Rg.otf").await;
+    let font = load_ttf_font("Coolvetica Rg.otf").await;
 
-    let circle100 =
-        Image::from_file_with_format(include_bytes!("../ui_myassets/circle75.png"), None);
+    let circle100 = Image::from_file_with_format(include_bytes!("../assets/circle75.png"), None);
 
     let button_style = match (circle100, font) {
         (Ok(circle100), Ok(font)) => root_ui()
@@ -279,6 +278,7 @@ impl GameTimer {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    set_pc_assets_folder("assets");
     let mut state = State::default();
 
     let timer = timer::Timer::new();
@@ -302,10 +302,10 @@ async fn main() {
     let skin_diagram = get_skin_diagram().await;
     let skin_title = get_skin_title().await;
 
-    let top_left_arc = load_texture("./ui_myassets/top_left_arc75.png")
+    let top_left_arc = load_texture("top_left_arc75.png")
         .await
         .unwrap_or(Texture2D::empty());
-    let top_right_arc = load_texture("./ui_myassets/top_right_arc75.png")
+    let top_right_arc = load_texture("top_right_arc75.png")
         .await
         .unwrap_or(Texture2D::empty());
 
