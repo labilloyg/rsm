@@ -69,20 +69,21 @@ async fn get_skin_diagram() -> Skin {
 
 #[derive(Debug, Clone)]
 struct State {
-    // The values for the exercice
-    result: String,
+    result: String, // The values for the exercice
     x1: String,
     x2: String,
-    // The info box
-    dialog: String,
-    // The reveal window to update value
-    open_window: bool,
+    dialog: String,    // The info box
+    open_window: bool, // The reveal window to update value
     pop_up_buf: String,
     target: DiagramValue,
+    nb_viewed: usize, // Answer stats
+    nb_correct: usize,
+    nb_wrong: usize,
+    // nb_skipped: usize,
 }
 
 impl State {
-    fn check_result(&self) -> String {
+    fn check_result(&self) -> (bool, String) {
         let res = self.result.parse::<i32>();
         let x1_val = self.x1.parse::<i32>();
         let x2_val = self.x2.parse::<i32>();
@@ -90,13 +91,19 @@ impl State {
         match (res, x1_val, x2_val) {
             (Ok(res), Ok(x1_val), Ok(x2_val)) => {
                 if res == x1_val + x2_val {
-                    String::from("Correct!")
+                    (true, String::from("Correct!"))
                 } else {
-                    String::from("Try again :)")
+                    (false, String::from("Try again :)"))
                 }
             }
-            _ => String::from("Invalid input!"),
+            _ => (false, String::from("Invalid input!")),
         }
+    }
+
+    fn reset_counts(&mut self) {
+        self.nb_viewed = 0;
+        self.nb_correct = 0;
+        self.nb_wrong = 0;
     }
 
     fn truncate(&mut self) {
@@ -165,6 +172,10 @@ impl Default for State {
             open_window: false,
             pop_up_buf: String::from(""),
             target: DiagramValue::X1,
+            nb_viewed: 0,
+            nb_correct: 0,
+            nb_wrong: 0,
+            // nb_skipped: 0,
         }
     }
 }
@@ -328,9 +339,16 @@ async fn main() {
                         state.push(c);
                     }
                     KeyAction::Check => {
-                        state.dialog = state.check_result();
+                        let (res, diag) = state.check_result();
+                        state.dialog = diag;
+                        if res {
+                            state.nb_correct += 1;
+                        } else {
+                            state.nb_wrong += 1;
+                        }
                     }
                     KeyAction::Next => {
+                        state.nb_viewed += 1;
                         State::random_addition(&mut state);
                     }
                 }
@@ -351,7 +369,7 @@ async fn main() {
                         ("Game Ended!".to_string(), "".to_string())
                     };
                 widgets::Label::new(timer_label).ui(ui);
-                ui.same_line(70.);
+                ui.same_line(100.);
                 widgets::Label::new(timer_message).ui(ui);
 
                 let start_label = if current_state.state == GameTimerState::Ended {
@@ -368,10 +386,12 @@ async fn main() {
                     match current_state.state {
                         GameTimerState::Initialized | GameTimerState::Paused => {
                             current_state.state = GameTimerState::Running;
+                            state.nb_viewed += 1;
                             state.dialog = "Waiting...".to_string();
                         }
                         GameTimerState::Ended => {
                             current_state.reset();
+                            state.reset_counts();
                             state.dialog = "Start the timer to play!".to_string();
                         }
                         _ => {}
@@ -394,11 +414,32 @@ async fn main() {
                         }
                         GameTimerState::Paused => {
                             current_state.reset();
+                            state.reset_counts();
                             state.dialog = "Start the timer to play!".to_string();
                         }
                         _ => {}
                     }
                 };
+            });
+
+        widgets::Group::new(hash!(), vec2(140., 200.))
+            .position(vec2(0., 150.))
+            .ui(&mut root_ui(), |ui| {
+                widgets::Label::new("Viewed:").ui(ui);
+                ui.same_line(100f32);
+                widgets::Label::new(state.nb_viewed.to_string()).ui(ui);
+
+                widgets::Label::new("Correct:").ui(ui);
+                ui.same_line(100f32);
+                widgets::Label::new(state.nb_correct.to_string()).ui(ui);
+
+                widgets::Label::new("Wrong:").ui(ui);
+                ui.same_line(100f32);
+                widgets::Label::new(state.nb_wrong.to_string()).ui(ui);
+
+                // widgets::Label::new("Skipped:").ui(ui);
+                // ui.same_line(100f32);
+                // widgets::Label::new(state.nb_skipped.to_string()).ui(ui);
             });
         // -- Left toolbar --
 
@@ -470,6 +511,7 @@ async fn main() {
             && timer_value.lock().unwrap().state == GameTimerState::Running
         {
             State::random_addition(&mut state);
+            state.nb_viewed += 1;
         };
         // -- Lower controls --
 
@@ -500,7 +542,13 @@ async fn main() {
                             }
                         }
                         state.open_window = false;
-                        state.dialog = state.check_result();
+                        let (res, diag) = state.check_result();
+                        state.dialog = diag;
+                        if res {
+                            state.nb_correct += 1;
+                        } else {
+                            state.nb_wrong += 1;
+                        }
                     };
                 },
             );
