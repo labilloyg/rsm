@@ -1,4 +1,5 @@
 /target
 /ui_assets
-/ui_myassets/*.afdesign*
+/ui_myassets/*
 *.zip
+

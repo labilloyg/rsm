@@ -1,3 +1,9 @@
+// use crate::prelude::*;
+
+mod errors;
+mod exercises;
+mod prelude;
+
 use macroquad::prelude::*;
 
 use macroquad::ui::{hash, root_ui, widgets, Skin};
@@ -273,9 +279,9 @@ struct GameTimer {
 impl Default for GameTimer {
     fn default() -> Self {
         Self {
-            nominal_value: 30,
+            nominal_value: 60,
             state: GameTimerState::Initialized,
-            value: 30,
+            value: 60,
         }
     }
 }
